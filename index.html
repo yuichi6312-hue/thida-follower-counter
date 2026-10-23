@@ -7,13 +7,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>THIDA フォロワーカウンター</title>
-<meta name="app-version" content="2026-10-23.4">
+<meta name="app-version" content="2026-10-23.5">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
-/* Layout: one landscape screen — sun in the corner, giant count left, follow-QR card right, today's gain + next milestone underneath */
+/* Layout: one landscape screen — big centered shop name on top, giant count left, follow-QR card right, today's gain + next milestone underneath */
 :root{
   --sea:#0d1b2a; --sea-2:#14283d;
   --sun:#ffb238; --sun-hot:#ff7a2f;
@@ -25,27 +25,30 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{
-  background:radial-gradient(120% 90% at 100% 0%, var(--sea-2) 0%, var(--sea) 60%);
+  background:var(--sea);
   color:var(--foam);font-family:var(--f-jp);overflow:hidden;
   padding:env(safe-area-inset-top,0) max(24px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0) max(24px,env(safe-area-inset-left,0px));
 }
-.sun{position:fixed;top:-22vmin;right:-22vmin;width:64vmin;height:64vmin;border-radius:50%;
-  background:radial-gradient(circle, var(--sun) 0 38%, rgba(255,178,56,.25) 39% 48%, rgba(255,178,56,.08) 49% 62%, transparent 63%);
-  pointer-events:none;transition:transform .8s cubic-bezier(.2,1.6,.4,1)}
-.sun.burst{transform:scale(1.18)}
-.rays{position:fixed;top:-22vmin;right:-22vmin;width:64vmin;height:64vmin;pointer-events:none;
-  background:repeating-conic-gradient(rgba(255,178,56,.10) 0 6deg, transparent 6deg 18deg);border-radius:50%;
-  mask:radial-gradient(circle, transparent 48%, #000 49%);-webkit-mask:radial-gradient(circle, transparent 48%, #000 49%);
-  animation:spin 90s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* background: preset gradient or the shop's own photo, with a dimmer so the numbers stay readable */
+.bg{position:fixed;inset:0;z-index:-2;background:radial-gradient(120% 90% at 100% 0%, var(--sea-2) 0%, var(--sea) 60%);
+  background-size:cover;background-position:center;transition:background .6s}
+.bg[data-bg="sea"]{background:linear-gradient(165deg,#0b6d84 0%,#0a4a63 45%,#062b3d 100%)}
+.bg[data-bg="sunset"]{background:linear-gradient(165deg,#4a1f45 0%,#8c3a35 50%,#c9692f 100%)}
+.bg[data-bg="kawara"]{background:linear-gradient(165deg,#8a3420 0%,#5c2214 55%,#2e100a 100%)}
+.bg[data-bg="black"]{background:#0b0b0d}
+main,.foot{text-shadow:0 1px 8px rgba(0,0,0,.45)}
+.qr,.qr *{text-shadow:none}
+.dim{position:fixed;inset:0;z-index:-1;background:#000;opacity:0;transition:opacity .3s}
 
 main{height:100%;display:grid;grid-template-rows:auto 1fr auto;padding-block:4vh 6vh;position:relative}
-header{display:flex;align-items:center;gap:14px}
-.ig{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:none;
+header{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.8vmin;min-width:0}
+.brand{margin:0;font-family:var(--f-num);font-weight:900;font-size:clamp(34px,8.5vmin,104px);line-height:1;letter-spacing:.04em;
+  text-wrap:balance;text-shadow:0 4px 24px rgba(0,0,0,.35)}
+.handle{display:flex;align-items:center;gap:.5em;font-size:clamp(14px,2.4vmin,26px);color:var(--mist)}
+.ig{width:1.5em;height:1.5em;border-radius:.4em;display:grid;place-items:center;flex:none;
   background:linear-gradient(135deg,var(--sun),var(--sun-hot));color:var(--sea)}
-.brand{display:flex;flex-direction:column;line-height:1.2;min-width:0}
-.brand b{font-size:clamp(16px,2.4vmin,26px);letter-spacing:.04em}
-.brand span{font-size:clamp(12px,1.8vmin,18px);color:var(--mist)}
+.ig svg{width:70%;height:70%}
 
 .middle{display:flex;align-items:center;justify-content:space-between;gap:4vmin;min-width:0}
 .center{min-width:0}
@@ -105,6 +108,15 @@ dialog::backdrop{background:rgba(5,10,18,.7)}
 .field small{font-size:12px;color:var(--mist);line-height:1.5}
 .field input{background:var(--sea);border:1px solid rgba(143,163,184,.35);color:var(--foam);border-radius:10px;padding:11px 12px;font:inherit;font-size:15px;width:100%}
 .check{display:flex;align-items:center;gap:10px;font-size:14px}
+.flabel{font-size:13px;font-weight:700}
+.swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sw{height:52px;border-radius:10px;border:2px solid transparent;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;
+  text-shadow:0 1px 3px rgba(0,0,0,.6);background-size:cover;background-position:center}
+.sw[data-bg="photo"]{background:repeating-linear-gradient(45deg,#2a3d52 0 8px,#22344a 8px 16px)}
+.sw[aria-checked="true"]{border-color:var(--sun);box-shadow:0 0 0 2px rgba(255,178,56,.35)}
+.photoRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.photoRow input[type=range]{flex:1;min-width:120px;accent-color:var(--sun)}
+.dimLabel{font-size:13px;color:var(--mist)}
 .check input{width:20px;height:20px;accent-color:var(--sun)}
 .row{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .primary{background:var(--sun);color:var(--sea);border:none;border-radius:10px;padding:11px 20px;font:inherit;font-weight:700;cursor:pointer}
@@ -147,18 +159,19 @@ hr{border:none;border-top:1px solid rgba(143,163,184,.2);margin:0}
   .qr{align-self:center}
   .stats{flex-direction:column;align-items:stretch}
 }
-@media (prefers-reduced-motion:reduce){ .rays{animation:none}.digit .strip,.sun,.bar i{transition:none} }
+@media (prefers-reduced-motion:reduce){ .digit .strip,.bar i{transition:none} }
 </style>
 </head>
 <body>
-<div class="rays" aria-hidden="true"></div>
-<div class="sun" id="sun" aria-hidden="true"></div>
+<div class="bg" id="bg" aria-hidden="true"></div>
+<div class="dim" id="dim" aria-hidden="true"></div>
 <main>
   <header>
-    <div class="ig" aria-hidden="true">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.3" cy="6.7" r="1.1" fill="currentColor" stroke="none"/></svg>
+    <h1 class="brand" id="brand">THIDA TRAINING GYM</h1>
+    <div class="handle">
+      <span class="ig" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.3" cy="6.7" r="1.1" fill="currentColor" stroke="none"/></svg></span>
+      <span id="user">@instagram</span>
     </div>
-    <div class="brand"><b id="brand">THIDA TRAINING GYM</b><span id="user">@instagram</span></div>
   </header>
 
   <div class="middle">
@@ -204,6 +217,24 @@ hr{border:none;border-top:1px solid rgba(143,163,184,.2);margin:0}
     <h2>設定</h2>
 
     <label class="check"><input type="checkbox" id="showQr" checked> フォロー用QRコードを表示する</label>
+    <div class="field">
+      <span class="flabel">背景</span>
+      <div class="swatches" id="swatches" role="radiogroup" aria-label="背景">
+        <button type="button" class="sw" data-bg="night" style="background:linear-gradient(165deg,#14283d,#0d1b2a)">夜の海</button>
+        <button type="button" class="sw" data-bg="sea" style="background:linear-gradient(165deg,#0b6d84,#062b3d)">美ら海</button>
+        <button type="button" class="sw" data-bg="sunset" style="background:linear-gradient(165deg,#4a1f45,#c9692f)">夕焼け</button>
+        <button type="button" class="sw" data-bg="kawara" style="background:linear-gradient(165deg,#8a3420,#2e100a)">赤瓦</button>
+        <button type="button" class="sw" data-bg="black" style="background:#0b0b0d">黒</button>
+        <button type="button" class="sw" data-bg="photo" id="swPhoto">写真</button>
+      </div>
+      <input type="file" id="bgFile" accept="image/*" hidden>
+      <div class="photoRow" id="photoRow" hidden>
+        <button class="ghost" type="button" id="pickPhoto">写真を選ぶ</button>
+        <label for="bgDim" class="dimLabel">暗さ</label>
+        <input type="range" id="bgDim" min="0" max="80" step="5" value="45">
+      </div>
+      <small>背景はこのタブレットに保存されます。写真は文字が読みやすいよう暗さを調整できます。</small>
+    </div>
     <label class="check"><input type="checkbox" id="showParty" checked> フォロワーが増えたら演出を出す</label>
     <label class="check"><input type="checkbox" id="playSound" checked> 演出のときに沖縄風の音楽を流す</label>
     <div class="row" style="justify-content:flex-start">
@@ -246,6 +277,37 @@ const store = {
 };
 function applyQrVisibility(){ $("qr").hidden = !store.get("showQr", true); }
 applyQrVisibility();
+
+/* ---------- background (this tablet only) ---------- */
+function applyBackground(){
+  const kind = store.get("bg", "night"), bg = $("bg"), dim = $("dim");
+  const photo = kind === "photo" ? store.get("bgPhoto", null) : null;
+  if (photo) {
+    bg.removeAttribute("data-bg"); bg.style.background = `center / cover no-repeat url("${photo}")`;
+    dim.style.opacity = store.get("bgDim", 45) / 100;
+  } else {
+    bg.style.background = ""; bg.dataset.bg = kind === "photo" ? "night" : kind; dim.style.opacity = 0;
+  }
+  document.querySelectorAll(".sw").forEach(b => b.setAttribute("aria-checked", String(b.dataset.bg === kind)));
+  $("photoRow").hidden = kind !== "photo";
+  $("bgDim").value = store.get("bgDim", 45);
+  if (photo) $("swPhoto").style.backgroundImage = `url("${photo}")`;
+}
+function resizePhoto(file){
+  return new Promise((resolve, reject) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, 1920 / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", .82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("load")); };
+    img.src = url;
+  });
+}
 
 /* ---------- counter ---------- */
 function renderCount(n){
@@ -472,7 +534,6 @@ function celebrate(gained, total, milestone){
                                          : `いま<b>${total.toLocaleString()}</b>人になりました`;
   }
   p.classList.add("on");
-  const s = $("sun"); s.classList.add("burst"); setTimeout(() => s.classList.remove("burst"), 900);
   confetti(milestone ? 260 : 90);
   if (milestone) setTimeout(() => confetti(200), 1200);
   okinawaTune(!!milestone);
@@ -585,10 +646,29 @@ $("fs").addEventListener("click", async () => {
 /* ---------- settings ---------- */
 const dlg = $("settings"), msg = (t, cls) => { $("msg").textContent = t; $("msg").className = "msg " + (cls || ""); };
 $("showParty").addEventListener("change", e => store.set("showParty", e.target.checked));
+$("swatches").addEventListener("click", e => {
+  const b = e.target.closest(".sw"); if (!b) return;
+  if (b.dataset.bg === "photo" && !store.get("bgPhoto", null)) { store.set("bg", "photo"); applyBackground(); $("bgFile").click(); return; }
+  store.set("bg", b.dataset.bg); applyBackground();
+});
+$("pickPhoto").addEventListener("click", () => $("bgFile").click());
+$("bgFile").addEventListener("change", async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  try {
+    const data = await resizePhoto(f);
+    try { localStorage.setItem("bgPhoto", JSON.stringify(data)); }
+    catch (_) { msg("写真が大きすぎて保存できませんでした。別の写真を選んでください。", "err"); return; }
+    store.set("bg", "photo"); applyBackground(); msg("背景を変更しました。", "ok");
+  } catch (_) { msg("この写真は読み込めませんでした。", "err"); }
+  e.target.value = "";
+});
+$("bgDim").addEventListener("input", e => { store.set("bgDim", Number(e.target.value)); applyBackground(); });
 $("playSound").addEventListener("change", e => store.set("playSound", e.target.checked));
 $("testParty").addEventListener("click", () => { dlg.close(); unlockAudio(); const n = (shown ?? 93) + 1; celebrate(1, n, null); });
 $("testMilestone").addEventListener("click", () => { dlg.close(); unlockAudio(); const n = shown ?? 93; const m = (n < 1000 ? 100 : n < 10000 ? 500 : 1000); celebrate(1, n, Math.floor(n / m) * m + m); });
+applyBackground();
 $("openSettings").addEventListener("click", () => {
+  applyBackground();
   $("showParty").checked = store.get("showParty", true);
   $("playSound").checked = store.get("playSound", true);
   $("showQr").checked = store.get("showQr", true);
