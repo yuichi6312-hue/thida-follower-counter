@@ -118,14 +118,14 @@ hr{border:none;border-top:1px solid rgba(143,163,184,.2);margin:0}
 .party .nth{font-size:clamp(16px,3.4vmin,36px);color:var(--foam);opacity:.85}
 .party .nth b{font-family:var(--f-num);font-size:1.5em;color:var(--sun);margin:0 .1em}
 .party.milestone .plus{font-size:clamp(70px,20vmin,240px)}
-.shisa{position:absolute;bottom:-4vmin;width:clamp(130px,30vmin,330px);transform:translateY(120%);
+.shisa{position:absolute;bottom:max(1vmin,env(safe-area-inset-bottom,0px));width:clamp(150px,34vmin,380px);transform:translateY(120%);
   transition:transform .7s cubic-bezier(.2,1.5,.4,1);filter:drop-shadow(0 10px 24px rgba(0,0,0,.45))}
 .shisa svg{width:100%;height:auto;display:block}
 .shisa.a{left:max(2vmin,env(safe-area-inset-left,0px))}
 .shisa.un{right:max(2vmin,env(safe-area-inset-right,0px))}
 .party.on .shisa{transform:translateY(0)}
 .party.on .shisa.un{transition-delay:.15s}
-.party.on .shisa svg{animation:dance .46s ease-in-out .8s infinite alternate}
+.party.on .shisa svg{transform-origin:50% 100%;animation:dance .46s ease-in-out .8s infinite alternate}
 .party.on .shisa.un svg{animation-delay:1.03s}
 @keyframes dance{from{transform:rotate(-6deg) translateY(0)}to{transform:rotate(6deg) translateY(-4%)}}
 .party .mtag{font-size:clamp(14px,2.6vmin,28px);font-weight:700;letter-spacing:.3em;color:var(--sea);background:var(--sun);
@@ -340,38 +340,69 @@ function okinawaTune(big){
   else whistle(t0 + total - e8);
 }
 
-/* Original shisa pair (阿 = open mouth, 吽 = closed mouth) */
+/* Original seated shisa pair (阿 = open mouth, 吽 = closed mouth), terracotta roof-tile style */
+function spiral(cx, cy, r, turns, color, w){
+  let d = "";
+  const steps = Math.round(turns * 28);
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps, a = t * turns * Math.PI * 2, rr = r * t;
+    d += (i ? " L" : "M") + (cx + Math.cos(a) * rr).toFixed(1) + " " + (cy + Math.sin(a) * rr).toFixed(1);
+  }
+  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
 function shisaSvg(open, flip){
-  const body = "#d9653b", mane = "#9c3b22", face = "#f2a25c", dark = "#3b170c";
-  const curls = Array.from({ length: 14 }, (_, i) => {
-    const a = (i / 14) * Math.PI * 2 - Math.PI / 2, x = 100 + Math.cos(a) * 80, y = 104 + Math.sin(a) * 74;
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="22" fill="${mane}"/><path d="M${(x-8).toFixed(1)} ${y.toFixed(1)} a8 8 0 1 1 8 8 a4 4 0 1 1 -4 -4" fill="none" stroke="${body}" stroke-width="3.5" stroke-linecap="round"/>`;
-  }).join("");
+  const base = "#de7048", shade = "#c95c37", line = "#b04a28", light = "#f2b08f", dark = "#6e2814";
+  // curly mane: ring of lobes around the head + a bib under the chin
+  const lobes = [];
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    lobes.push([196 + Math.cos(a) * 64, 112 + Math.sin(a) * 58, 24]);
+  }
+  for (let i = 0; i < 5; i++) lobes.push([150 + i * 23, 176 + (i % 2) * 8, 22]);
+  const mane = lobes.map(([x, y, r]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${shade}"/>`).join("");
+  const maneCurls = lobes.filter((_, i) => i % 2 === 0).map(([x, y]) => spiral(x, y, 11, 1.6, line, 3.2)).join("");
   const mouth = open
-    ? `<path d="M58 140 Q100 132 142 140 Q138 192 100 194 Q62 192 58 140Z" fill="${dark}"/>
-       <ellipse cx="100" cy="178" rx="24" ry="11" fill="#e2464a"/>
-       <path d="M64 141 L70 154 L76 142 M124 142 L130 154 L136 141" fill="#fff"/>
-       <path d="M80 141 h40 v6 h-40z" fill="#fff"/>
-       <path d="M70 188 L74 176 L79 189 M121 189 L126 176 L130 188" fill="#fff"/>`
-    : `<path d="M60 148 Q100 172 140 148" fill="none" stroke="${dark}" stroke-width="7" stroke-linecap="round"/>
-       <path d="M74 156 L78 142 L84 158Z M116 158 L122 142 L126 156Z" fill="#fff" stroke="${dark}" stroke-width="2" stroke-linejoin="round"/>`;
-  return `<svg viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg" style="${flip ? "transform:scaleX(-1)" : ""}">
-    ${curls}
-    <ellipse cx="48" cy="38" rx="14" ry="18" fill="${body}" transform="rotate(-25 48 38)"/>
-    <ellipse cx="152" cy="38" rx="14" ry="18" fill="${body}" transform="rotate(25 152 38)"/>
-    <ellipse cx="100" cy="108" rx="68" ry="66" fill="${body}"/>
-    <ellipse cx="100" cy="132" rx="50" ry="40" fill="${face}"/>
-    <path d="M52 76 Q70 58 90 74 M110 74 Q130 58 148 76" fill="none" stroke="${mane}" stroke-width="9" stroke-linecap="round"/>
-    <circle cx="72" cy="94" r="16" fill="#fff"/><circle cx="128" cy="94" r="16" fill="#fff"/>
-    <circle cx="76" cy="96" r="8" fill="${dark}"/><circle cx="124" cy="96" r="8" fill="${dark}"/>
-    <circle cx="78" cy="93" r="2.6" fill="#fff"/><circle cx="126" cy="93" r="2.6" fill="#fff"/>
-    <ellipse cx="100" cy="122" rx="19" ry="13" fill="${dark}"/>
-    <circle cx="93" cy="124" r="3.5" fill="${body}"/><circle cx="107" cy="124" r="3.5" fill="${body}"/>
-    <circle cx="56" cy="126" r="9" fill="#ff8a6a" opacity=".55"/><circle cx="144" cy="126" r="9" fill="#ff8a6a" opacity=".55"/>
+    ? `<path d="M164 138 Q196 130 228 138 Q224 168 196 170 Q168 168 164 138Z" fill="${dark}"/>
+       <path d="M178 160 Q196 150 214 160 Q206 168 196 168 Q186 168 178 160Z" fill="#d9494a"/>
+       <path d="M168 139 L173 152 L179 140Z M213 140 L219 152 L224 139Z" fill="#fff4ea"/>
+       <path d="M184 139 h24 v5 h-24z" fill="#fff4ea"/>`
+    : `<path d="M164 142 Q196 160 228 142" fill="none" stroke="${dark}" stroke-width="5" stroke-linecap="round"/>
+       <path d="M174 148 L178 134 L183 150Z M209 150 L214 134 L218 148Z" fill="#fff4ea" stroke="${dark}" stroke-width="1.5" stroke-linejoin="round"/>
+       <path d="M184 158 Q196 164 208 158" fill="none" stroke="${line}" stroke-width="3" stroke-linecap="round"/>`;
+  return `<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"><g${flip ? ' transform="translate(300 0) scale(-1 1)"' : ""}>
+    <!-- flame tail -->
+    <path d="M86 212 C30 206 10 160 30 112 C38 136 52 146 64 140 C58 118 66 96 84 84 C84 112 100 128 116 134 C122 160 112 196 86 212Z" fill="${base}"/>
+    ${spiral(56, 168, 16, 1.8, line, 3.5)}${spiral(86, 120, 10, 1.5, line, 3)}
+    <!-- body -->
+    <path d="M70 290 C58 250 70 200 120 186 L240 186 C262 220 262 262 256 290 Z" fill="${base}"/>
+    <ellipse cx="108" cy="240" rx="46" ry="44" fill="${shade}"/>
+    ${spiral(108, 238, 22, 2.1, line, 4)}
+    <!-- back paw -->
+    <rect x="62" y="262" width="76" height="30" rx="14" fill="${base}"/>
+    <path d="M86 276 v14 M100 276 v14 M114 276 v14" stroke="${line}" stroke-width="3" stroke-linecap="round"/>
+    <!-- front legs -->
+    <rect x="164" y="198" width="40" height="94" rx="16" fill="${base}"/>
+    <rect x="214" y="198" width="40" height="94" rx="16" fill="${base}"/>
+    <path d="M176 274 v16 M190 274 v16 M226 274 v16 M240 274 v16" stroke="${line}" stroke-width="3" stroke-linecap="round"/>
+    ${spiral(184, 232, 10, 1.6, line, 3)}${spiral(234, 232, 10, 1.6, line, 3)}
+    <!-- ears -->
+    <path d="M140 74 L132 26 L172 56Z" fill="${base}"/><path d="M144 64 L140 40 L160 56" fill="none" stroke="${line}" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M252 74 L260 26 L220 56Z" fill="${base}"/><path d="M248 64 L252 40 L232 56" fill="none" stroke="${line}" stroke-width="3" stroke-linejoin="round"/>
+    <!-- mane + head -->
+    ${mane}${maneCurls}
+    <ellipse cx="196" cy="112" rx="56" ry="52" fill="${base}"/>
+    <!-- brows -->
+    ${spiral(170, 80, 9, 1.4, line, 4)}${spiral(222, 80, 9, 1.4, line, 4)}
+    <path d="M160 92 Q174 82 188 92 M204 92 Q218 82 232 92" fill="none" stroke="${line}" stroke-width="5" stroke-linecap="round"/>
+    <!-- eyes -->
+    <path d="M160 102 Q174 92 188 102 Q174 112 160 102Z" fill="${light}"/>
+    <path d="M204 102 Q218 92 232 102 Q218 112 204 102Z" fill="${light}"/>
+    <circle cx="175" cy="102" r="5.5" fill="${dark}"/><circle cx="217" cy="102" r="5.5" fill="${dark}"/>
+    <!-- nose -->
+    <path d="M178 116 Q196 106 214 116 Q216 128 196 130 Q176 128 178 116Z" fill="${shade}"/>
+    <ellipse cx="188" cy="122" rx="4.5" ry="3" fill="${dark}"/><ellipse cx="204" cy="122" rx="4.5" ry="3" fill="${dark}"/>
     ${mouth}
-    <rect x="44" y="196" width="44" height="30" rx="14" fill="${body}"/><rect x="112" y="196" width="44" height="30" rx="14" fill="${body}"/>
-    <path d="M58 212 v12 M68 212 v12 M78 212 v12 M122 212 v12 M132 212 v12 M142 212 v12" stroke="${mane}" stroke-width="3" stroke-linecap="round"/>
-  </svg>`;
+  </g></svg>`;
 }
 $("shisaA").innerHTML = shisaSvg(true, false);
 $("shisaUn").innerHTML = shisaSvg(false, true);
