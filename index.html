@@ -7,6 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>THIDA フォロワーカウンター</title>
+<meta name="app-version" content="2026-10-23.1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
@@ -519,6 +520,21 @@ async function tick(){
 }
 tick(); setInterval(tick, POLL_MS);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { tick(); keepAwake(); } });
+
+/* ---------- auto-update: pick up new versions without touching the tablet ---------- */
+const MY_VERSION = document.querySelector('meta[name="app-version"]').content;
+async function checkUpdate(){
+  try {
+    const r = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" });
+    const html = await r.text();
+    const m = html.match(/name="app-version" content="([^"]+)"/);
+    if (m && m[1] !== MY_VERSION) {
+      if ($("party").classList.contains("on") || $("settings").open) return; // wait for a quiet moment
+      location.replace(location.pathname + "?v=" + encodeURIComponent(m[1]));
+    }
+  } catch (_) {}
+}
+setInterval(checkUpdate, 5 * 60 * 1000);
 
 /* ---------- screen ---------- */
 let lock = null;
