@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>THIDA フォロワーカウンター</title>
-<meta name="app-version" content="2026-10-23.8">
+<meta name="app-version" content="2026-10-23.9">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
@@ -39,13 +39,27 @@ body{
 .bg[data-bg="black"]{background:#0b0b0d}
 main,.foot{text-shadow:0 1px 8px rgba(0,0,0,.45)}
 .qr,.qr *{text-shadow:none}
-.photo-bg header,.photo-bg .center,.photo-bg .stats{background:rgba(10,20,32,.58);
-  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:22px;padding:1.6vmin 3.2vmin}
-.photo-bg header{justify-self:center;max-width:100%}
-.photo-bg .center{padding-bottom:2.4vmin}
-.photo-bg .stats{justify-self:center;width:min(100%,900px);margin-inline:auto}
-.photo-bg .foot{background:rgba(10,20,32,.58);border-radius:12px;padding:6px 10px}
-.photo-bg .handle,.photo-bg .stat small{color:#c9d5e2}
+/* photo backgrounds: cinematic scrim (darker top & bottom, soft pool behind the number) + glassy chips for small text */
+.scrim{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .4s;
+  background:
+    radial-gradient(ellipse 60% 42% at 50% 52%, rgba(6,14,24,.42), transparent 70%),
+    linear-gradient(to bottom, rgba(6,14,24,.62) 0%, rgba(6,14,24,.12) 26%, rgba(6,14,24,0) 45%, rgba(6,14,24,.18) 66%, rgba(6,14,24,.72) 100%)}
+.photo-bg .scrim{opacity:1}
+.photo-bg main{text-shadow:0 1px 2px rgba(0,0,0,.35),0 6px 28px rgba(0,0,0,.5)}
+.photo-bg .brand{text-shadow:0 2px 6px rgba(0,0,0,.35),0 10px 40px rgba(0,0,0,.5)}
+.count,.count *{text-shadow:none}
+.photo-bg .count{filter:drop-shadow(0 2px 3px rgba(0,0,0,.3)) drop-shadow(0 10px 30px rgba(0,0,0,.45))}
+.photo-bg .handle,.photo-bg .label,.photo-bg .stat small{
+  display:inline-flex;align-items:center;width:max-content;max-width:100%;margin-inline:auto;
+  background:rgba(8,18,30,.38);-webkit-backdrop-filter:blur(12px) saturate(1.3);backdrop-filter:blur(12px) saturate(1.3);
+  border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:.35em 1em;text-shadow:none}
+.photo-bg .handle{color:#eef3f8}
+.photo-bg .stat small{color:#eef3f8}
+.photo-bg .label{color:var(--sun);margin-bottom:1vmin}
+.photo-bg .bar{background:rgba(8,18,30,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);height:14px;border-radius:7px}
+.photo-bg .foot{text-shadow:none}
+.photo-bg .foot > span:first-child{background:rgba(8,18,30,.38);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-radius:999px;padding:4px 12px;color:#eef3f8}
+.photo-bg .ghost{background:rgba(8,18,30,.38);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-color:rgba(255,255,255,.22);color:#eef3f8;border-radius:999px}
 .dim{position:fixed;inset:0;z-index:-1;background:#000;opacity:0;transition:opacity .3s}
 
 main{height:100%;display:grid;grid-template-rows:auto 1fr auto;padding-block:4vh calc(54px + env(safe-area-inset-bottom,0px));position:relative}
@@ -177,6 +191,7 @@ hr{border:none;border-top:1px solid rgba(143,163,184,.2);margin:0}
 <body>
 <div class="bg" id="bg" aria-hidden="true"></div>
 <div class="dim" id="dim" aria-hidden="true"></div>
+<div class="scrim" aria-hidden="true"></div>
 <main>
   <header>
     <h1 class="brand" id="brand">THIDA TRAINING GYM</h1>
