@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>THIDA フォロワーカウンター</title>
-<meta name="app-version" content="2026-10-23.3">
+<meta name="app-version" content="2026-10-23.4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
@@ -235,7 +235,7 @@ hr{border:none;border-top:1px solid rgba(143,163,184,.2);margin:0}
 
 <script>
 const API = "https://ujrssjdbplvkfdesuxng.supabase.co/functions/v1/ig-followers";
-const POLL_MS = 30 * 1000;
+const POLL_MS = 60 * 1000;
 const $ = id => document.getElementById(id);
 let shown = null, currentUser = null, currentDisplay = null;
 
