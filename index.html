@@ -103,6 +103,24 @@ dialog::backdrop{background:rgba(5,10,18,.7)}
 .msg.ok{color:var(--up)} .msg.err{color:var(--down)}
 hr{border:none;border-top:1px solid rgba(143,163,184,.2);margin:0}
 
+/* celebration */
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:20}
+.party{position:fixed;inset:0;z-index:21;display:grid;place-items:center;pointer-events:none;
+  background:radial-gradient(circle at 50% 50%, rgba(74,52,30,.95), rgba(13,27,42,.96) 70%);
+  opacity:0;transition:opacity .35s ease}
+.party.on{opacity:1}
+.party .card{text-align:center;display:flex;flex-direction:column;align-items:center;gap:1.5vmin;padding:0 16px;
+  transform:scale(.6);transition:transform .6s cubic-bezier(.2,1.6,.4,1)}
+.party.on .card{transform:scale(1)}
+.party .plus{font-family:var(--f-num);font-weight:900;font-size:clamp(90px,26vmin,300px);line-height:.9;color:var(--sun);
+  text-shadow:0 0 40px rgba(255,178,56,.55)}
+.party .thanks{font-size:clamp(26px,6.5vmin,72px);font-weight:700;letter-spacing:.06em}
+.party .nth{font-size:clamp(16px,3.4vmin,36px);color:var(--foam);opacity:.85}
+.party .nth b{font-family:var(--f-num);font-size:1.5em;color:var(--sun);margin:0 .1em}
+.party.milestone .plus{font-size:clamp(70px,20vmin,240px)}
+.party .mtag{font-size:clamp(14px,2.6vmin,28px);font-weight:700;letter-spacing:.3em;color:var(--sea);background:var(--sun);
+  padding:.35em 1em;border-radius:999px}
+
 @media (orientation:portrait){
   .middle{flex-direction:column;align-items:flex-start}
   .count{font-size:clamp(80px,24vw,300px)}
@@ -148,11 +166,27 @@ hr{border:none;border-top:1px solid rgba(143,163,184,.2);margin:0}
   </span>
 </div>
 
+<canvas id="confetti" aria-hidden="true"></canvas>
+<div class="party" id="party" aria-live="assertive">
+  <div class="card">
+    <span class="mtag" id="pTag" hidden>MILESTONE</span>
+    <div class="plus" id="pPlus">+1</div>
+    <div class="thanks" id="pThanks">フォローありがとう！</div>
+    <div class="nth" id="pNth"></div>
+  </div>
+</div>
+
 <dialog id="settings">
   <form class="panel" id="settingsForm" method="dialog">
     <h2>設定</h2>
 
     <label class="check"><input type="checkbox" id="showQr" checked> フォロー用QRコードを表示する</label>
+    <label class="check"><input type="checkbox" id="showParty" checked> フォロワーが増えたら演出を出す</label>
+    <label class="check"><input type="checkbox" id="playSound" checked> 演出のときに音を鳴らす</label>
+    <div class="row" style="justify-content:flex-start">
+      <button class="ghost" type="button" id="testParty">演出を試す</button>
+      <button class="ghost" type="button" id="testMilestone">節目の演出を試す</button>
+    </div>
     <hr>
     <p class="hint">ここから下の変更はサーバーに保存されます。保存にはパスコードが必要です。</p>
     <div class="field">
@@ -230,9 +264,91 @@ function renderQr(username){
   } catch (_) { $("qrcode").textContent = url; }
 }
 
+/* ---------- celebration ---------- */
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let audioCtx = null;
+function unlockAudio(){
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === "suspended") audioCtx.resume(); } catch (_) {}
+}
+["pointerdown", "keydown", "touchstart"].forEach(ev => document.addEventListener(ev, unlockAudio, { passive: true }));
+
+function chime(big){
+  if (!store.get("playSound", true) || !audioCtx || audioCtx.state !== "running") return;
+  // bright pentatonic arpeggio — 琉球音階 (ド・ミ・ファ・ソ・シ)
+  const notes = big ? [523.25, 659.25, 698.46, 783.99, 987.77, 1046.5, 1318.5] : [659.25, 783.99, 987.77, 1046.5];
+  const t0 = audioCtx.currentTime + .02;
+  notes.forEach((f, i) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "triangle"; o.frequency.value = f;
+    const t = t0 + i * (big ? .11 : .09);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.22, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + .9);
+    o.connect(g).connect(audioCtx.destination); o.start(t); o.stop(t + 1);
+  });
+}
+
+const cv = $("confetti"), cx = cv.getContext("2d");
+let bits = [], raf = null;
+function confetti(amount){
+  if (reduceMotion) return;
+  const dpr = devicePixelRatio || 1;
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const colors = ["#ffb238", "#ff7a2f", "#f3efe6", "#6fdc8c", "#4cc9f0", "#ff5d8f"];
+  for (let i = 0; i < amount; i++) {
+    const fromLeft = i % 2 === 0;
+    bits.push({
+      x: fromLeft ? -10 : innerWidth + 10, y: innerHeight * (.55 + Math.random() * .4),
+      vx: (fromLeft ? 1 : -1) * (6 + Math.random() * 9), vy: -(11 + Math.random() * 11),
+      w: 7 + Math.random() * 8, h: 10 + Math.random() * 12, r: Math.random() * 6, vr: (Math.random() - .5) * .35,
+      c: colors[i % colors.length], life: 0
+    });
+  }
+  if (!raf) raf = requestAnimationFrame(step);
+}
+function step(){
+  cx.clearRect(0, 0, innerWidth, innerHeight);
+  bits = bits.filter(b => b.y < innerHeight + 40 && b.life < 600);
+  for (const b of bits) {
+    b.life++; b.vy += .32; b.vx *= .985; b.x += b.vx; b.y += b.vy; b.r += b.vr;
+    cx.save(); cx.translate(b.x, b.y); cx.rotate(b.r); cx.scale(1, Math.cos(b.life * .12));
+    cx.fillStyle = b.c; cx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); cx.restore();
+  }
+  raf = bits.length ? requestAnimationFrame(step) : (cx.clearRect(0, 0, innerWidth, innerHeight), null);
+}
+
+let partyTimer = null;
+function celebrate(gained, total, milestone){
+  if (!store.get("showParty", true)) return;
+  const p = $("party");
+  p.classList.toggle("milestone", !!milestone);
+  $("pTag").hidden = !milestone;
+  if (milestone) {
+    $("pPlus").textContent = milestone.toLocaleString() + "人";
+    $("pThanks").textContent = "フォロワー達成！";
+    $("pNth").innerHTML = "いつも応援ありがとうございます";
+  } else {
+    $("pPlus").textContent = "+" + gained.toLocaleString();
+    $("pThanks").textContent = "フォローありがとう！";
+    $("pNth").innerHTML = gained === 1 ? `あなたが<b>${total.toLocaleString()}</b>人目のフォロワーです`
+                                         : `いま<b>${total.toLocaleString()}</b>人になりました`;
+  }
+  p.classList.add("on");
+  const s = $("sun"); s.classList.add("burst"); setTimeout(() => s.classList.remove("burst"), 900);
+  confetti(milestone ? 260 : 90);
+  if (milestone) setTimeout(() => confetti(200), 1200);
+  chime(!!milestone);
+  clearTimeout(partyTimer);
+  partyTimer = setTimeout(() => p.classList.remove("on"), milestone ? 10000 : 5000);
+}
+function crossedMilestone(from, to){
+  // the largest round number passed: every 100 under 1,000 / 500 under 10,000 / 1,000 above
+  const step = to < 1000 ? 100 : to < 10000 ? 500 : 1000;
+  const m = Math.floor(to / step) * step;
+  return m > from ? m : null;
+}
+
 function render(d){
   const n = d.followers_count;
-  if (shown !== null && n > shown) { const s = $("sun"); s.classList.add("burst"); setTimeout(() => s.classList.remove("burst"), 900); }
+  if (shown !== null && n > shown) celebrate(n - shown, n, crossedMilestone(shown, n));
   renderCount(n); shown = n;
   renderQr(d.username);
   if (d.display_name) { currentDisplay = d.display_name; $("brand").textContent = d.display_name; }
@@ -284,7 +400,13 @@ $("fs").addEventListener("click", async () => {
 
 /* ---------- settings ---------- */
 const dlg = $("settings"), msg = (t, cls) => { $("msg").textContent = t; $("msg").className = "msg " + (cls || ""); };
+$("showParty").addEventListener("change", e => store.set("showParty", e.target.checked));
+$("playSound").addEventListener("change", e => store.set("playSound", e.target.checked));
+$("testParty").addEventListener("click", () => { dlg.close(); unlockAudio(); const n = (shown ?? 93) + 1; celebrate(1, n, null); });
+$("testMilestone").addEventListener("click", () => { dlg.close(); unlockAudio(); const n = shown ?? 93; const m = (n < 1000 ? 100 : n < 10000 ? 500 : 1000); celebrate(1, n, Math.floor(n / m) * m + m); });
 $("openSettings").addEventListener("click", () => {
+  $("showParty").checked = store.get("showParty", true);
+  $("playSound").checked = store.get("playSound", true);
   $("showQr").checked = store.get("showQr", true);
   $("displayName").value = currentDisplay || "";
   $("newToken").value = ""; msg("");
