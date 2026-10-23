@@ -120,13 +120,13 @@ hr{border:none;border-top:1px solid rgba(143,163,184,.2);margin:0}
 .party.milestone .plus{font-size:clamp(70px,20vmin,240px)}
 .shisa{position:absolute;bottom:max(1vmin,env(safe-area-inset-bottom,0px));width:clamp(150px,34vmin,380px);transform:translateY(120%);
   transition:transform .7s cubic-bezier(.2,1.5,.4,1);filter:drop-shadow(0 10px 24px rgba(0,0,0,.45))}
-.shisa svg{width:100%;height:auto;display:block}
+.shisa svg,.shisa img{width:100%;height:auto;display:block}
 .shisa.a{left:max(2vmin,env(safe-area-inset-left,0px))}
 .shisa.un{right:max(2vmin,env(safe-area-inset-right,0px))}
 .party.on .shisa{transform:translateY(0)}
 .party.on .shisa.un{transition-delay:.15s}
-.party.on .shisa svg{transform-origin:50% 100%;animation:dance .46s ease-in-out .8s infinite alternate}
-.party.on .shisa.un svg{animation-delay:1.03s}
+.party.on .shisa > *{transform-origin:50% 100%;animation:dance .46s ease-in-out .8s infinite alternate}
+.party.on .shisa.un > *{animation-delay:1.03s}
 @keyframes dance{from{transform:rotate(-6deg) translateY(0)}to{transform:rotate(6deg) translateY(-4%)}}
 .party .mtag{font-size:clamp(14px,2.6vmin,28px);font-weight:700;letter-spacing:.3em;color:var(--sea);background:var(--sun);
   padding:.35em 1em;border-radius:999px}
@@ -404,8 +404,16 @@ function shisaSvg(open, flip){
     ${mouth}
   </g></svg>`;
 }
-$("shisaA").innerHTML = shisaSvg(true, false);
-$("shisaUn").innerHTML = shisaSvg(false, true);
+// Shisa illustration: イラストセンター (illustcenter.com). Falls back to the drawn version if the image can't load.
+function placeShisa(id, src, open, flip){
+  const img = new Image();
+  img.alt = ""; img.decoding = "async";
+  img.onload = () => { $(id).innerHTML = ""; $(id).appendChild(img); };
+  img.onerror = () => { $(id).innerHTML = shisaSvg(open, flip); };
+  img.src = src;
+}
+placeShisa("shisaA", "img/shisa-left.png", false, false);
+placeShisa("shisaUn", "img/shisa-right.png", true, true);
 
 const cv = $("confetti"), cx = cv.getContext("2d");
 let bits = [], raf = null;
