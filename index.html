@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>THIDA フォロワーカウンター</title>
-<meta name="app-version" content="2026-10-23.5">
+<meta name="app-version" content="2026-10-23.6">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
@@ -50,9 +50,11 @@ header{display:flex;flex-direction:column;align-items:center;text-align:center;g
   background:linear-gradient(135deg,var(--sun),var(--sun-hot));color:var(--sea)}
 .ig svg{width:70%;height:70%}
 
-.middle{display:flex;align-items:center;justify-content:space-between;gap:4vmin;min-width:0}
-.center{min-width:0}
-.label{font-size:clamp(14px,2.6vmin,28px);font-weight:700;color:var(--sun);letter-spacing:.3em;margin-left:.4vmin}
+/* count sits in the true center; equal side columns keep it there, QR card in the right column */
+.middle{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:3vmin;min-width:0}
+.center{min-width:0;grid-column:2;display:flex;flex-direction:column;align-items:center;text-align:center}
+.middle .qr{grid-column:3;justify-self:end}
+.label{font-size:clamp(14px,2.6vmin,28px);font-weight:700;color:var(--sun);letter-spacing:.3em;padding-left:.3em}
 .count{font-family:var(--f-num);font-weight:900;font-size:clamp(96px,28vmin,340px);line-height:.9;
   display:flex;font-variant-numeric:tabular-nums;user-select:none}
 .digit{position:relative;display:inline-block;width:.56em;height:.9em;overflow:hidden}
@@ -61,7 +63,7 @@ header{display:flex;flex-direction:column;align-items:center;text-align:center;g
 .comma{width:.24em;display:inline-block;color:var(--mist)}
 
 .qr{flex:none;background:var(--foam);color:var(--sea);border-radius:20px;padding:2.2vmin;
-  display:flex;flex-direction:column;align-items:center;gap:1.2vmin;width:clamp(170px,30vmin,330px);
+  display:flex;flex-direction:column;align-items:center;gap:1.2vmin;width:clamp(160px,25vmin,290px);
   box-shadow:0 0 0 6px rgba(255,178,56,.35)}
 .qr .code{width:100%;aspect-ratio:1;max-width:100%}
 .qr .code svg{width:100%;height:100%;display:block}
@@ -77,12 +79,12 @@ header{display:flex;flex-direction:column;align-items:center;text-align:center;g
   vertical-align:-.12em;margin-right:.4em;animation:spin .8s linear infinite}
 .qr span{font-size:clamp(11px,1.7vmin,16px);color:#4a5b6c;word-break:break-all;text-align:center}
 
-.stats{display:flex;flex-wrap:wrap;gap:3vmin 6vmin;align-items:flex-end}
+.stats{display:flex;flex-wrap:wrap;gap:3vmin 6vmin;align-items:flex-end;justify-content:center;text-align:center}
 .stat{display:flex;flex-direction:column;gap:6px;min-width:0}
 .stat small{font-size:clamp(12px,1.9vmin,20px);color:var(--mist);letter-spacing:.12em}
 .stat strong{font-family:var(--f-num);font-weight:700;font-size:clamp(34px,7vmin,84px);line-height:1}
 .gain{color:var(--up)} .gain.zero{color:var(--foam)} .gain.down{color:var(--down)}
-.goal{flex:1 1 280px}
+.goal{flex:0 1 560px}
 .bar{height:12px;border-radius:6px;background:rgba(243,239,230,.12);overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--sun-hot),var(--sun));transition:width 1.2s ease}
 .goal strong{font-size:clamp(24px,4.6vmin,52px)}
@@ -154,10 +156,11 @@ hr{border:none;border-top:1px solid rgba(143,163,184,.2);margin:0}
   padding:.35em 1em;border-radius:999px}
 
 @media (orientation:portrait){
-  .middle{flex-direction:column;align-items:flex-start}
+  .middle{grid-template-columns:1fr}
+  .center,.middle .qr{grid-column:1;justify-self:center}
   .count{font-size:clamp(80px,24vw,300px)}
-  .qr{align-self:center}
-  .stats{flex-direction:column;align-items:stretch}
+  .stats{flex-direction:column;align-items:center}
+  .goal{width:100%;flex:none}
 }
 @media (prefers-reduced-motion:reduce){ .digit .strip,.bar i{transition:none} }
 </style>
