@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>THIDA フォロワーカウンター</title>
-<meta name="app-version" content="2026-10-23.6">
+<meta name="app-version" content="2026-10-23.7">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
@@ -363,7 +363,7 @@ function unlockAudio(){
 /* Original Okinawan-style phrase: 琉球音階 (ド・ミ・ファ・ソ・シ), sanshin-like pluck, パーランクー-like drum, 指笛 */
 const NOTE = { C4:261.63, E4:329.63, F4:349.23, G4:392.00, B4:493.88, C5:523.25, E5:659.25, F5:698.46, G5:783.99, B5:987.77, C6:1046.5 };
 // [note, length in eighths]  — "-" = rest
-const PHRASE_SHORT = [["E5",1],["G5",1],["B5",1],["C6",1],["B5",1],["G5",1],["C6",3]];
+const PHRASE_SHORT = [["E5",1],["G5",1],["B5",1],["C6",1],["B5",1],["G5",1],["C6",2]];
 const PHRASE_LONG = [
   ["C5",1],["E5",1],["F5",1],["G5",1],  ["B5",1],["C6",1],["B5",1],["G5",1],
   ["F5",1],["G5",1],["E5",1],["C5",1],  ["E5",1],["F5",1],["G5",2],
@@ -403,17 +403,35 @@ function whistle(t){
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.09, t + .05); g.gain.setValueAtTime(.09, t + .6); g.gain.linearRampToValueAtTime(0, t + .75);
   o.connect(g).connect(a.destination); o.start(t); o.stop(t + .8);
 }
+function sanba(t, vol){ // 三板-like dry click on the bounced upbeat
+  const a = audioCtx;
+  if (!noiseBuf) return;
+  const n = a.createBufferSource(), hp = a.createBiquadFilter(), g = a.createGain();
+  n.buffer = noiseBuf; hp.type = "bandpass"; hp.frequency.value = 3200; hp.Q.value = 3;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + .05);
+  n.connect(hp).connect(g).connect(a.destination); n.start(t); n.stop(t + .06);
+}
 function okinawaTune(big){
   if (!store.get("playSound", true) || !audioCtx || audioCtx.state !== "running") return;
-  const e8 = big ? .19 : .16;                 // length of an eighth note (s)
+  // Shuffle (ハネ) feel: each beat splits long-short, 2:1 like a triplet — カチャーシーのノリ
+  const beat = big ? .36 : .33, SWING = 2 / 3;
+  const at = pos => Math.floor(pos / 2) * beat + (pos % 2 ? beat * SWING : 0);   // pos = eighth-note index
   const t0 = audioCtx.currentTime + .05;
   const phrase = big ? PHRASE_LONG : PHRASE_SHORT;
-  let t = t0;
-  for (const [n, len] of phrase) { if (n !== "-") pluck(t, NOTE[n], .2); t += len * e8; }
-  const total = t - t0, beats = Math.round(total / (e8 * 2));
-  for (let i = 0; i < beats; i++) drum(t0 + i * e8 * 2, i % 2 ? .18 : .3);   // 2拍子のリズム
-  if (big) { whistle(t0 + total - e8 * 2); whistle(t0 + total + .5); }
-  else whistle(t0 + total - e8);
+  let pos = 0;
+  for (const [n, len] of phrase) {
+    if (n !== "-") pluck(t0 + at(pos), NOTE[n], pos % 2 ? .16 : .22);   // downbeats a little stronger
+    pos += len;
+  }
+  const beats = Math.ceil(pos / 2);
+  for (let i = 0; i < beats; i++) {
+    drum(t0 + i * beat, i % 2 ? .2 : .32);                   // ドン on every beat, heavier on 1 and 3
+    sanba(t0 + i * beat + beat * SWING, .22);                // カッ on the bounced upbeat
+    if (i % 2) drum(t0 + i * beat + beat * SWING, .1);       // ghost hit for extra bounce
+  }
+  const end = t0 + beats * beat;
+  if (big) { whistle(end - beat * 2); whistle(end + .35); }
+  else whistle(end - beat);
 }
 
 /* Original seated shisa pair (阿 = open mouth, 吽 = closed mouth), terracotta roof-tile style */
