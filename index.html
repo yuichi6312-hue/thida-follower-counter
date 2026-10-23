@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>THIDA フォロワーカウンター</title>
-<meta name="app-version" content="2026-10-23.1">
+<meta name="app-version" content="2026-10-23.2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
@@ -65,6 +65,13 @@ header{display:flex;align-items:center;gap:14px}
 .qr b{font-size:clamp(14px,2.4vmin,24px);letter-spacing:.06em}
 .qr .sns{font-style:normal;font-weight:700;font-size:clamp(12px,2vmin,20px);letter-spacing:.14em;color:#b8471f;margin-bottom:-.6vmin}
 .qr b{white-space:nowrap}
+.followed{margin-top:.6vmin;width:100%;border:none;border-radius:999px;padding:1.4vmin 1em;cursor:pointer;
+  font:inherit;font-weight:700;font-size:clamp(13px,2.2vmin,22px);color:var(--sea);
+  background:linear-gradient(90deg,var(--sun-hot),var(--sun));box-shadow:0 4px 0 #b8471f;transition:transform .1s, box-shadow .1s}
+.followed:active{transform:translateY(3px);box-shadow:0 1px 0 #b8471f}
+.followed[disabled]{cursor:default;background:#e6dccb;box-shadow:none;color:#4a5b6c}
+.followed .spin{display:inline-block;width:.9em;height:.9em;border:.16em solid currentColor;border-right-color:transparent;border-radius:50%;
+  vertical-align:-.12em;margin-right:.4em;animation:spin .8s linear infinite}
 .qr span{font-size:clamp(11px,1.7vmin,16px);color:#4a5b6c;word-break:break-all;text-align:center}
 
 .stats{display:flex;flex-wrap:wrap;gap:3vmin 6vmin;align-items:flex-end}
@@ -163,6 +170,7 @@ hr{border:none;border-top:1px solid rgba(143,163,184,.2);margin:0}
       <div class="code" id="qrcode" role="img" aria-label="InstagramプロフィールのQRコード"></div>
       <em class="sns">Instagram</em><b>フォローはこちら</b>
       <span id="qrUser">@instagram</span>
+      <button class="followed" id="followed" type="button">フォローしたらタップ</button>
     </aside>
   </div>
 
@@ -227,7 +235,7 @@ hr{border:none;border-top:1px solid rgba(143,163,184,.2);margin:0}
 
 <script>
 const API = "https://ujrssjdbplvkfdesuxng.supabase.co/functions/v1/ig-followers";
-const POLL_MS = 60 * 1000;
+const POLL_MS = 30 * 1000;
 const $ = id => document.getElementById(id);
 let shown = null, currentUser = null, currentDisplay = null;
 
@@ -504,21 +512,50 @@ function showDemo(reason, displayName){
   setStatus(`<span class="demo">サンプル表示</span>　${reason}`, false);
 }
 
-async function tick(){
+let busy = false, demoMode = false;
+async function tick(fresh){
+  if (busy) return; busy = true;
   try {
-    const r = await fetch(API, { cache: "no-store" });
+    const r = await fetch(API + (fresh ? "?fresh=1" : ""), { cache: "no-store" });
     const d = await r.json();
-    if (d.error === "no_token") return showDemo("Instagramのトークンが未設定です（設定から登録できます）", d.display_name);
+    if (d.error === "no_token") { demoMode = true; return showDemo("Instagramのトークンが未設定です（設定から登録できます）", d.display_name); }
+    demoMode = false;
     if (!r.ok || typeof d.followers_count !== "number") throw new Error(d.detail || d.error || r.status);
     render(d);
     const t = new Date(d.fetched_at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
     setStatus(d.stale ? `前回の数字を表示中（${t} 取得）` : `${t} 更新`, !d.stale);
   } catch (e) {
-    if (shown === null) showDemo("サーバーに接続できません");
+    if (shown === null) { demoMode = true; showDemo("サーバーに接続できません"); }
     else setStatus("接続を再試行中…", false);
-  }
+  } finally { busy = false; }
 }
-tick(); setInterval(tick, POLL_MS);
+tick(); setInterval(() => tick(false), POLL_MS);
+
+/* ---------- "I just followed" button: check every 5 s for up to 90 s ---------- */
+const FOLLOW_LABEL = "フォローしたらタップ";
+let watchTimer = null;
+function stopWatch(text){
+  clearInterval(watchTimer); watchTimer = null;
+  const b = $("followed");
+  b.innerHTML = text || FOLLOW_LABEL;
+  setTimeout(() => { b.disabled = false; b.textContent = FOLLOW_LABEL; }, text ? 6000 : 0);
+}
+$("followed").addEventListener("click", () => {
+  if (watchTimer) return;
+  unlockAudio();
+  const b = $("followed"), before = shown, started = Date.now();
+  b.disabled = true; b.innerHTML = '<span class="spin" aria-hidden="true"></span>確認中…';
+  if (demoMode) { // sample mode: show what it looks like
+    setTimeout(() => { demo += 1; render({ followers_count: demo, today_start: 1229, username: "thida_training_gym" }); stopWatch("ありがとうございます！"); }, 2500);
+    watchTimer = -1; return;
+  }
+  const check = async () => {
+    await tick(true);
+    if (shown !== null && before !== null && shown > before) return stopWatch("ありがとうございます！");
+    if (Date.now() - started > 90000) stopWatch("反映に少し時間がかかっています。増えたら演出が出ます");
+  };
+  check(); watchTimer = setInterval(check, 5000);
+});
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { tick(); keepAwake(); } });
 
 /* ---------- auto-update: pick up new versions without touching the tablet ---------- */
