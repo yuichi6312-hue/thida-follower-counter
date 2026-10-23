@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>THIDA フォロワーカウンター</title>
-<meta name="app-version" content="2026-10-23.7">
+<meta name="app-version" content="2026-10-23.8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
@@ -39,9 +39,16 @@ body{
 .bg[data-bg="black"]{background:#0b0b0d}
 main,.foot{text-shadow:0 1px 8px rgba(0,0,0,.45)}
 .qr,.qr *{text-shadow:none}
+.photo-bg header,.photo-bg .center,.photo-bg .stats{background:rgba(10,20,32,.58);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:22px;padding:1.6vmin 3.2vmin}
+.photo-bg header{justify-self:center;max-width:100%}
+.photo-bg .center{padding-bottom:2.4vmin}
+.photo-bg .stats{justify-self:center;width:min(100%,900px);margin-inline:auto}
+.photo-bg .foot{background:rgba(10,20,32,.58);border-radius:12px;padding:6px 10px}
+.photo-bg .handle,.photo-bg .stat small{color:#c9d5e2}
 .dim{position:fixed;inset:0;z-index:-1;background:#000;opacity:0;transition:opacity .3s}
 
-main{height:100%;display:grid;grid-template-rows:auto 1fr auto;padding-block:4vh 6vh;position:relative}
+main{height:100%;display:grid;grid-template-rows:auto 1fr auto;padding-block:4vh calc(54px + env(safe-area-inset-bottom,0px));position:relative}
 header{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.8vmin;min-width:0}
 .brand{margin:0;font-family:var(--f-num);font-weight:900;font-size:clamp(34px,8.5vmin,104px);line-height:1;letter-spacing:.04em;
   text-wrap:balance;text-shadow:0 4px 24px rgba(0,0,0,.35)}
@@ -91,7 +98,9 @@ header{display:flex;flex-direction:column;align-items:center;text-align:center;g
 
 .foot{position:fixed;left:max(24px,env(safe-area-inset-left,0px));right:max(24px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));
   display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;color:var(--mist)}
-.foot .btns{display:flex;gap:8px}
+.foot .btns{display:flex;gap:8px;flex:none}
+.foot > span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ghost{white-space:nowrap}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--up);margin-right:6px;vertical-align:1px}
 .dot.warn{background:var(--sun)}
 .demo{color:var(--sun);font-weight:700}
@@ -288,7 +297,9 @@ function applyBackground(){
   if (photo) {
     bg.removeAttribute("data-bg"); bg.style.background = `center / cover no-repeat url("${photo}")`;
     dim.style.opacity = store.get("bgDim", 45) / 100;
+    document.documentElement.classList.add("photo-bg");
   } else {
+    document.documentElement.classList.remove("photo-bg");
     bg.style.background = ""; bg.dataset.bg = kind === "photo" ? "night" : kind; dim.style.opacity = 0;
   }
   document.querySelectorAll(".sw").forEach(b => b.setAttribute("aria-checked", String(b.dataset.bg === kind)));
@@ -363,7 +374,10 @@ function unlockAudio(){
 /* Original Okinawan-style phrase: 琉球音階 (ド・ミ・ファ・ソ・シ), sanshin-like pluck, パーランクー-like drum, 指笛 */
 const NOTE = { C4:261.63, E4:329.63, F4:349.23, G4:392.00, B4:493.88, C5:523.25, E5:659.25, F5:698.46, G5:783.99, B5:987.77, C6:1046.5 };
 // [note, length in eighths]  — "-" = rest
-const PHRASE_SHORT = [["E5",1],["G5",1],["B5",1],["C6",1],["B5",1],["G5",1],["C6",2]];
+const PHRASE_SHORT = [
+  ["C5",1],["E5",1],["F5",1],["G5",1],  ["B5",1],["G5",1],["C6",2],
+  ["B5",1],["C6",1],["G5",1],["F5",1],  ["E5",1],["G5",1],["C6",2]
+];
 const PHRASE_LONG = [
   ["C5",1],["E5",1],["F5",1],["G5",1],  ["B5",1],["C6",1],["B5",1],["G5",1],
   ["F5",1],["G5",1],["E5",1],["C5",1],  ["E5",1],["F5",1],["G5",2],
@@ -395,13 +409,45 @@ function drum(t, vol){
   og.gain.setValueAtTime(vol * .9, t); og.gain.exponentialRampToValueAtTime(.001, t + .14);
   o.connect(og).connect(a.destination); o.start(t); o.stop(t + .16);
 }
+/* 指笛: a pure, slightly breathy tone that scoops up, holds with a wobble, then flicks up and falls away */
+let breathBuf = null;
+function whistleNote(t, f0, f1, hold, fall, vol){
+  const a = audioCtx;
+  if (!breathBuf) { breathBuf = a.createBuffer(1, a.sampleRate * 1.5, a.sampleRate); const d = breathBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const end = t + .07 + hold + fall;
+  const o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain(), g2 = a.createGain();
+  o.type = "sine"; o2.type = "sine";
+  // pitch: quick scoop up, wobble while held, drop at the end
+  o.frequency.setValueAtTime(f0, t);
+  o.frequency.exponentialRampToValueAtTime(f1, t + .07);
+  o.frequency.setValueAtTime(f1, t + .07 + hold);
+  o.frequency.exponentialRampToValueAtTime(f1 * .78, end);
+  const lfo = a.createOscillator(), lg = a.createGain();
+  lfo.frequency.value = 7.5; lg.gain.value = f1 * .012;            // lip/finger wobble
+  lfo.connect(lg).connect(o.frequency);
+  // faint 2nd harmonic for edge
+  o2.frequency.setValueAtTime(f0 * 2, t); o2.frequency.exponentialRampToValueAtTime(f1 * 2, t + .07);
+  o2.frequency.setValueAtTime(f1 * 2, t + .07 + hold); o2.frequency.exponentialRampToValueAtTime(f1 * 1.56, end);
+  g2.gain.value = .06;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol * 1.15, t + .03); g.gain.linearRampToValueAtTime(vol, t + .09);
+  g.gain.setValueAtTime(vol, t + .07 + hold); g.gain.exponentialRampToValueAtTime(.0005, end);
+  o.connect(g); o2.connect(g2).connect(g); g.connect(a.destination);
+  // breath: noise tuned around the whistle pitch + a little airy hiss
+  const n = a.createBufferSource(), bp = a.createBiquadFilter(), ng = a.createGain();
+  n.buffer = breathBuf; bp.type = "bandpass"; bp.Q.value = 9;
+  bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + .07);
+  ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(vol * .9, t + .02); ng.gain.setValueAtTime(vol * .5, t + .07 + hold); ng.gain.exponentialRampToValueAtTime(.0005, end);
+  n.connect(bp).connect(ng).connect(a.destination);
+  const h = a.createBufferSource(), hp = a.createBiquadFilter(), hg = a.createGain();
+  h.buffer = breathBuf; hp.type = "highpass"; hp.frequency.value = 5000;
+  hg.gain.setValueAtTime(vol * .25, t); hg.gain.exponentialRampToValueAtTime(.0005, t + .12);
+  h.connect(hp).connect(hg).connect(a.destination);
+  [o, o2, lfo, n, h].forEach(x => { x.start(t); x.stop(end + .02); });
+}
 function whistle(t){
-  const a = audioCtx, o = a.createOscillator(), g = a.createGain();
-  o.type = "sine";
-  o.frequency.setValueAtTime(1900, t); o.frequency.exponentialRampToValueAtTime(3300, t + .18);
-  o.frequency.setValueAtTime(3300, t + .45); o.frequency.exponentialRampToValueAtTime(2600, t + .7);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.09, t + .05); g.gain.setValueAtTime(.09, t + .6); g.gain.linearRampToValueAtTime(0, t + .75);
-  o.connect(g).connect(a.destination); o.start(t); o.stop(t + .8);
+  // "ピューイッ" — long scoop up, then a sharp upward flick
+  whistleNote(t, 1700, 2900, .34, .10, .085);
+  whistleNote(t + .52, 2500, 3500, .10, .16, .08);
 }
 function sanba(t, vol){ // 三板-like dry click on the bounced upbeat
   const a = audioCtx;
@@ -559,7 +605,7 @@ function celebrate(gained, total, milestone){
   if (milestone) setTimeout(() => confetti(200), 1200);
   okinawaTune(!!milestone);
   clearTimeout(partyTimer);
-  partyTimer = setTimeout(() => p.classList.remove("on"), milestone ? 10000 : 5000);
+  partyTimer = setTimeout(() => p.classList.remove("on"), milestone ? 10000 : 6500);
 }
 function crossedMilestone(from, to){
   // the largest round number passed: every 100 under 1,000 / 500 under 10,000 / 1,000 above
